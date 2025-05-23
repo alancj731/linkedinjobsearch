@@ -1,0 +1,24 @@
+{
+  "name": "linkedinsearch",
+  "version": "0.0.1",
+  "description": "login in into linked in use username and password and search",
+  "keywords": [
+    "linkedIn"
+  ],
+  "license": "ISC",
+  "author": "jian chen",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.js",
+    "start": "node dist/src/index.js"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "puppeteer": "^24.9.0"
+  }
+}

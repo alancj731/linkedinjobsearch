@@ -20,9 +20,8 @@ const linkedinService = new LinkedInService();
     console.log("Exporting jobs...");
     await linkedinService.ExportJobs();
     console.log("Job export completed!");
-
-    // await sleep(5000);
-    // await linkedinService.Close();
+    await sleep(3000);
+    await linkedinService.Close();
   }
   catch (err) {
     console.error(err);

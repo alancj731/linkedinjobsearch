@@ -1,6 +1,6 @@
 
 import LinkedInService from "./services/linkedin.service";
-import {sleep, wait} from "./utils/utils";
+import Parser from "./services/parser.service";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -10,21 +10,17 @@ const linkedinService = new LinkedInService();
 (async () => {
   try {
     await linkedinService.Init();
-    await linkedinService.Login();
-    console.log("Logged in successfully!");
-    await wait();
-    console.log("Searching for jobs...");
-    await linkedinService.SearchJobs();
-    console.log("Job search completed!");
-    await wait();
-    console.log("Exporting jobs...");
-    await linkedinService.ExportJobs();
-    console.log("Job export completed!");
-    await sleep(3000);
-    await linkedinService.Close();
+    const html = await linkedinService.SearchAndReturnHtml();
+    const parser = new Parser(html);
+    await parser.parse();
   }
   catch (err) {
     console.error(err);
     return;
   }
+  finally
+  {
+    // await linkedinService.Close();
+  }
+
 })();

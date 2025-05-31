@@ -1,12 +1,18 @@
 import puppeteer, { Browser, Page } from "puppeteer";
-import { sleep, wait, getPostedRange } from "../utils/utils";
+import { sleep, wait, getPostedRange, extractJobID } from "../utils/utils";
+import Parser from "./parser.service";
+import { JOBINFO, JOBINFOWITHID } from "src/types/jobInfo";
+import postgresDB from "./postgres/repo";
 
 export default class LinkedInService {
   public browser: Browser | null = null;
+  private parser: Parser = new Parser("<div></div>");
   private username: string = process.env.USERNAME || "";
   private password: string = process.env.PASSWORD || "";
   private jobTitle: string = process.env.JOB_TITLE || "";
   private page: Page | null = null;
+  private jobs: JOBINFO[] = [];
+  private db: postgresDB = postgresDB.getInstance();
 
   public async Init() {
     try {
@@ -36,7 +42,7 @@ export default class LinkedInService {
       await page.type("#password", this.password);
       await wait();
       await page.click(".btn__primary--large");
-      await sleep(15000)
+      await sleep(15000);
       await wait();
     } catch (err) {
       console.error("Error logging in:", err);
@@ -68,16 +74,80 @@ export default class LinkedInService {
     await wait();
     await this.page.click(".artdeco-button--primary");
     await wait();
-    // await this.page.waitForSelector(
-    //   ".scaffold-layout__list.jobs-semantic-search-list"
-    // );
+    await this.Browsing();
+    console.log("total jobs found:", this.jobs.length);
+    
+    await this.db.connect();
+    const jobsWithIDs = this.jobs.map((job) => ({
+      ...job,
+      job_id: extractJobID(job.link),
+    }));
+    console.log("Database Connected successfully.");
+    const existingJobIDs = await this.db.getAllJobIDs();
+    const jobsToSave = jobsWithIDs.filter(
+      (job) => !existingJobIDs.includes(job.job_id)
+    );
+    console.log("Jobs to save:", jobsToSave.length);
 
-    // Now scroll using the mouse wheel
-    for (let i = 0; i < 5; i++) {
-      await this.page.mouse.wheel({ deltaY: 800 }); // Scroll down
-      await wait(); 
+    if (jobsToSave.length > 0) {
+      await this.db.insertJobs('jobs', jobsToSave);
+      console.log("Jobs inserted successfully.");
+      await this.db.truncateTable('new_jobs');
+      await this.db.insertJobs('new_jobs', jobsToSave);
+      console.log("New jobs inserted into new_job table successfully.");
+    } else {
+      console.log("No new jobs to insert.");
     }
-    await wait();
+
+    await this.db.disconnect();
+    console.log("✅ PostgreSQL connection disconnected successfully.");
+  }
+
+  private async filterNewJobs(jobs: JOBINFO[]): Promise<JOBINFOWITHID[]> {
+    const existingJobIDs = await this.db.getAllJobIDs();
+    const jobsWithIDs = jobs.map((job) => ({
+      ...job,
+      job_id: extractJobID(job.link),
+    }));
+    const newJobs = jobsWithIDs.filter(
+      (job) => !existingJobIDs.includes(job.job_id)
+    );
+    return newJobs;
+  }
+
+  private async Browsing() {
+    if (!this.page) {
+      throw new Error("Page is not initialized. Please login first.");
+    }
+    let browsing = true;
+    while (browsing) {
+      for (let i = 0; i < 10; i++) {
+        await this.page!.mouse.wheel({ deltaY: 800 });
+        await wait();
+      }
+      await wait();
+      const html = await this.page.content();
+      this.parser.setContent(html);
+
+      const foundJobs = await this.parser.parse();
+      if (foundJobs.length === 0) {
+        console.warn("No jobs found. Pleasebs check your search criteria.");
+        browsing = false;
+      } else {
+        this.jobs.push(...foundJobs);
+        const moreJobsPageToSearch = await this.parser.CheckExtraJobsPage();
+        if (!moreJobsPageToSearch) {
+          console.log("No more jobs page. Ending search.");
+          browsing = false;
+        } else {
+          console.log("Found more jobs page. Continuing search.");
+          // see next page
+          await this.page.click('button[aria-label="View next page"]');
+          await sleep(8000);
+        }
+      }
+    }
+    return null;
   }
 
   public async ExportPage() {
@@ -87,7 +157,7 @@ export default class LinkedInService {
     return await this.page.content();
   }
 
-  public async SearchAndReturnHtml(): Promise<string> {
+  public async SearchAndReturn(): Promise<boolean> {
     try {
       await this.Login();
       console.log("Logged in successfully!");
@@ -95,12 +165,7 @@ export default class LinkedInService {
       console.log("Searching for jobs...");
       await this.SearchJobs();
       console.log("Job search completed!");
-      await wait();
-      console.log("Exporting jobs...");
-      await wait();
-      const html = await this.ExportPage();
-      console.log("Job export completed!");
-      return html;
+      return true;
     } catch (err) {
       console.error("Error during job search:", err);
       throw err;

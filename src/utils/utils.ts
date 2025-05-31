@@ -25,4 +25,10 @@ const getPostedRange = () => {
     
 }
 
-export { sleep, wait, getPostedRange }
+const extractJobID = (url: string): string => {
+    const regex = /currentJobId=(\d+)/;
+    const match = url.match(regex);
+    return match ? match[1] : '';
+}
+
+export { sleep, wait, getPostedRange, extractJobID }

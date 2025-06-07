@@ -19,10 +19,10 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@google-cloud/functions-framework": "^4.0.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.5.0",
     "pg": "^8.16.0",
     "puppeteer": "^24.9.0"
-  },
-  "type": "module"
+  }
 }

@@ -1,0 +1,6 @@
+gcloud functions deploy jobsearch \
+  --env-vars-file /home/jian/Documents/Work/personal_projects/linkedin/.env.yaml \
+  --runtime nodejs22 \
+  --timeout 500s \
+  --trigger-topic=linkedinsearch-topic
+  --entry-point=jobsearchapp

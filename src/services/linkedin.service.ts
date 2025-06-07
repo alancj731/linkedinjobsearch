@@ -88,6 +88,7 @@ export default class LinkedInService {
       (job) => !existingJobIDs.includes(job.job_id)
     );
     console.log("Jobs to save:", jobsToSave.length);
+    console.log("Jobs info", jobsToSave);
 
     if (jobsToSave.length > 0) {
       await this.db.insertJobs('jobs', jobsToSave);

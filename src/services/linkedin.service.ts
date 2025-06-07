@@ -17,7 +17,7 @@ export default class LinkedInService {
   public async Init() {
     try {
       this.browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
     } catch (err) {
@@ -42,7 +42,7 @@ export default class LinkedInService {
       await page.type("#password", this.password);
       await wait();
       await page.click(".btn__primary--large");
-      await sleep(15000);
+      await sleep(5000);
       await wait();
     } catch (err) {
       console.error("Error logging in:", err);
@@ -87,7 +87,8 @@ export default class LinkedInService {
     const jobsToSave = jobsWithIDs.filter(
       (job) => !existingJobIDs.includes(job.job_id)
     );
-    console.log("Jobs to save:", jobsToSave.length);
+    console.log(`Found ${jobsToSave.length} new jobs to save.`);
+    console.log("New Jobs:", jobsToSave);
 
     if (jobsToSave.length > 0) {
       await this.db.insertJobs('jobs', jobsToSave);
